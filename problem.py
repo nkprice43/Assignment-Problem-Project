@@ -20,7 +20,6 @@ class Problem:
     def __str__(self) -> str:
         s = f'''
 Problem Size: 2 ^ {self.problemSize}
-            Assignments: {self.assignments}
             Total Cost: {self.totalCost()}
             Basic Operation Count: {self.basicOpCount}
             Processing Time: {self.time}
