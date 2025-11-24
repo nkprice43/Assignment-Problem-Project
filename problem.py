@@ -1,6 +1,5 @@
 # This class exists to represent an instance of The Assignment Problem at a given size
 
-import array as arr
 import time
 import random
 
@@ -8,25 +7,22 @@ class Problem:
 
     def __init__(self, problemSize: int) -> None:
 
-        self.problemSize = 2 ** problemSize
+        self.problemSize = problemSize
         
-        self.workers = arr.array('d', [random.random() for i in range(self.problemSize)])
+        self.workers_tasks = [[random.random() for i in range(2 ** self.problemSize)] for j in range(2 ** self.problemSize)]
         
-        self.tasks = arr.array('d', [random.random() for i in range(self.problemSize)])
-        
-        self.costMatrix = [[random.random() for i in range(self.problemSize)] for j in range(self.problemSize)]
-        
-        self.assignments = [(i, 0) for i in range(self.problemSize)]
+        self.assignments = [(i, i) for i in range(2 ** self.problemSize)]
         
         self.time = 0
 
         self.basicOpCount = 0
 
     def __str__(self) -> str:
-        s = f'''Problem Size: {self.problemSize}
-            Workers: {self.workers}
-            Tasks: {self.tasks}
+        s = f'''
+Problem Size: 2 ^ {self.problemSize}
             Assignments: {self.assignments}
+            Total Cost: {self.totalCost()}
+            Basic Operation Count: {self.basicOpCount}
             Processing Time: {self.time}
         '''
 
@@ -39,8 +35,17 @@ class Problem:
     def stop(self):
         self.time += time.time()
 
+    def totalCost(self):
+        cost = 0
+        for a in self.assignments:
+            cost += self.workers_tasks[a[0]][a[1]]
+        return cost
+
+
 if __name__ == '__main__':
     random.seed(time.time())
     p = Problem(3)
     p.start()
+    p.stop()
+
     print(p)
