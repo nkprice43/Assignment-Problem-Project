@@ -1,0 +1,5 @@
+Assignment Problem
+Brute Force
+Greedy Task Scheduling
+Hungarian
+Maximum Flow Reduction
