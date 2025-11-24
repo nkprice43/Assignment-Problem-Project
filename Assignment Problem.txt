@@ -1,5 +1,8 @@
 Assignment Problem
-Brute Force
-Greedy Task Scheduling
-Hungarian
-Maximum Flow Reduction
+
+Algorithms to analyze paired with their implimentors' initials
+
+Brute Force - NB
+Greedy Task Scheduling - BR
+Hungarian - BR
+Maximum Flow Reduction - NP
