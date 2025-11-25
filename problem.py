@@ -9,9 +9,9 @@ class Problem:
 
         self.problemSize = problemSize
         
-        self.workers_tasks = [[random.random() for i in range(2 ** self.problemSize)] for j in range(2 ** self.problemSize)]
+        self.workers_tasks = [[random.random() for i in range(self.problemSize)] for j in range(self.problemSize)]
         
-        self.assignments = [(i, i) for i in range(2 ** self.problemSize)]
+        self.assignments = [(i, i) for i in range(self.problemSize)]
         
         self.time = 0
 
@@ -19,7 +19,7 @@ class Problem:
 
     def __str__(self) -> str:
         s = f'''
-Problem Size: 2 ^ {self.problemSize}
+Problem Size: {self.problemSize}
             Total Cost: {self.totalCost()}
             Basic Operation Count: {self.basicOpCount}
             Processing Time: {self.time}
