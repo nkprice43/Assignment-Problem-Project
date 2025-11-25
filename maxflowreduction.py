@@ -93,7 +93,7 @@ def solve_assignment_with_min_cost_flow(p: Problem, require_perfect: bool = True
     If require_perfect is True, raises a ValueError if a perfect assignment (flow = n) cannot be found.
     """
 
-    n = 2 ** p.problemSize
+    n = p.problemSize
     # node indexing:
     # 0              -> source
     # 1 .. n         -> workers (worker i at node 1+i)
