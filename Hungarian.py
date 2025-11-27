@@ -1,40 +1,7 @@
 import numpy as np
-import random
-import time
 from scipy.optimize import linear_sum_assignment
 
-class Problem:
-
-    def __init__(self, problemSize: int) -> None:
-        self.problemSize = problemSize
-        # Initialize a random cost matrix (0 to 1)
-        self.workers_tasks = [[random.random() for i in range(self.problemSize)] for j in range(self.problemSize)]
-        # Initial assignments (will be updated by the solver)
-        self.assignments = []
-        self.time = 0.0
-        self.basicOpCount = 0  # Note: SciPy library operations are not easily counted
-
-    def __str__(self) -> str:
-        s = f'''
-    Problem Size: {self.problemSize}
-                Total Cost: {self.totalCost()}
-                Basic Operation Count: {self.basicOpCount}
-                Processing Time: {self.time:.6f} seconds
-            '''
-        return s
-
-    def start(self):
-        self.time = -time.time()
-
-    def stop(self):
-        self.time += time.time()
-
-    def totalCost(self):
-        cost = 0
-        for worker, job in self.assignments:
-            cost += self.workers_tasks[worker][job]
-        return cost
-
+from problem import Problem
 
 def solve_hungarian(p: Problem) -> None:
     """

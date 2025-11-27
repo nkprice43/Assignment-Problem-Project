@@ -9,7 +9,7 @@ class Problem:
 
         self.problemSize = problemSize
         
-        self.workers_tasks = [[random.random() for i in range(self.problemSize)] for j in range(self.problemSize)]
+        self.workers_tasks = [[random.random() for _ in range(self.problemSize)] for _ in range(self.problemSize)]
         
         self.assignments = [(i, i) for i in range(self.problemSize)]
         
