@@ -26,24 +26,28 @@ class MinCostMaxFlow:
         self.graph[fr].append(fwd)
         self.graph[to].append(rev)
 
-    def min_cost_flow(self, s:int, t:int, maxf:int):
+    def min_cost_flow(self, s: int, t: int, maxf: int):
         n = self.n
-        prevv = [0]*n   # previous vertex
-        preve = [0]*n   # previous edge index
+        prevv = [0] * n
+        preve = [0] * n
         INF = float('inf')
 
-        # potentials to deal with negative costs (Johnson)
-        pot = [0.0]*n
-        dist = [0.0]*n
+        pot = [0.0] * n
+        dist = [0.0] * n
         flow = 0
         cost = 0.0
 
+        # --- Simplified op counter ---
+        # Count only "nd < dist[e.to]" comparisons in Dijkstra
+        opCount = 0
+
         while flow < maxf:
-            # Dijkstra on reduced costs
             for i in range(n):
                 dist[i] = INF
             dist[s] = 0.0
+
             pq = [(0.0, s)]
+
             while pq:
                 d, v = heapq.heappop(pq)
                 if d > dist[v]:
@@ -51,36 +55,39 @@ class MinCostMaxFlow:
                 for ei, e in enumerate(self.graph[v]):
                     if e.cap > 0:
                         nd = dist[v] + e.cost + pot[v] - pot[e.to]
+                        opCount += 1  # count this single comparison
                         if nd < dist[e.to]:
                             dist[e.to] = nd
                             prevv[e.to] = v
                             preve[e.to] = ei
                             heapq.heappush(pq, (nd, e.to))
+
             if dist[t] == INF:
-                # cannot send more flow
                 break
-            # update potentials
+
             for v in range(n):
                 if dist[v] < INF:
                     pot[v] += dist[v]
-            # add as much as possible (in our construction capacities are 1)
+
             addf = maxf - flow
             v = t
             while v != s:
                 e = self.graph[prevv[v]][preve[v]]
                 addf = min(addf, e.cap)
                 v = prevv[v]
+
             v = t
             while v != s:
                 e = self.graph[prevv[v]][preve[v]]
                 e.cap -= addf
-                # reverse edge
                 self.graph[v][e.rev].cap += addf
                 v = prevv[v]
-            # increase totals
+
             delta_cost = addf * pot[t]
             flow += addf
             cost += delta_cost
+
+        self.opCount = opCount
         return flow, cost
 
 # -----------------------------
@@ -145,7 +152,7 @@ def solve_assignment_with_min_cost_flow(p: Problem, require_perfect: bool = True
                     assignments.append((i, job_index))
                     break
 
-    return assignments, total_cost
+    return assignments, total_cost, mcmf
 
 # -----------------------------
 # Utility to update Problem object after solving
@@ -164,8 +171,9 @@ if __name__ == "__main__":
     p = Problem(3)   # problemSize = 3 -> n = 8
 
     p.start()
-    assignments, cost = solve_assignment_with_min_cost_flow(p, require_perfect=True)
+    assignments, cost, mcmf = solve_assignment_with_min_cost_flow(p, require_perfect=True)
     assign_solution_to_problem(p, assignments, cost)
+    p.basicOpCount = mcmf.opCount
     p.stop()
 
     # Print result
