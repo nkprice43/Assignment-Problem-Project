@@ -1,6 +1,6 @@
 import random
 import time
-import numpy as np  
+import numpy as np  # Used for matrix operations, which makes implementation cleaner
 
 
 class Problem:
@@ -107,3 +107,105 @@ def _step3_cover_zeros(cost_matrix: np.ndarray, p: 'Problem') -> tuple:
     # 1 addition/comparison for each element in the array
     p.basicOpCount += N
 
+    return num_lines, row_covered, col_covered, Z
+
+
+def _step4_adjust_matrix(cost_matrix: np.ndarray, row_covered: np.ndarray, col_covered: np.ndarray,
+                         p: 'Problem') -> np.ndarray:
+    """Adjusts the matrix if the number of lines is less than N."""
+    N = p.problemSize
+
+    # Find the smallest uncovered element (min_val)
+    min_val = np.inf
+    # N*N comparisons
+    p.basicOpCount += N * N
+    for i in range(N):
+        if not row_covered[i]:
+            for j in range(N):
+                if not col_covered[j]:
+                    min_val = min(min_val, cost_matrix[i, j])
+
+    # 1. Subtract min_val from every uncovered element
+    # N*N checks/subtractions in the worst case (O(N^2))
+    for i in range(N):
+        for j in range(N):
+            if not row_covered[i] and not col_covered[j]:
+                cost_matrix[i, j] -= min_val
+                p.basicOpCount += 1
+
+    # 2. Add min_val to every element covered by two lines (double-covered)
+    # N*N checks/additions in the worst case (O(N^2))
+    for i in range(N):
+        if row_covered[i]:
+            for j in range(N):
+                if col_covered[j]:
+                    cost_matrix[i, j] += min_val
+                    p.basicOpCount += 1
+
+    # The total operation count for this step is dominated by O(N^2)
+    return cost_matrix
+
+
+def _get_assignments(Z: np.ndarray) -> list:
+    """Extracts the final assignments from the Z matrix."""
+    return list(zip(*np.where(Z == 1)))
+
+
+def solve_hungarian(p: Problem) -> None:
+    """
+    Solves the assignment problem using a manual implementation of the Hungarian method.
+    Modifies the problem_instance in-place and counts basic operations.
+    NOTE: The assignment logic (Steps 3/4) is simplified for counting and Python readability.
+    """
+    p.start()
+    N = p.problemSize
+
+    # 1. Copy the cost matrix to a working matrix (N*N assignments)
+    cost_matrix = np.array(p.workers_tasks)
+    p.basicOpCount += N * N
+
+    # The core loop of the Hungarian algorithm
+    iteration_count = 0
+    while True:
+        iteration_count += 1
+
+        # Step 1: Row Reduction
+        cost_matrix = _step1_reduce_rows(cost_matrix, p)
+
+        # Step 2: Column Reduction
+        cost_matrix = _step2_reduce_cols(cost_matrix, p)
+
+        # Step 3: Cover Zeros and find initial assignment
+        num_lines, row_covered, col_covered, Z = _step3_cover_zeros(cost_matrix, p)
+
+        # Check for optimality (N lines cover all zeros)
+        # N comparisons
+        p.basicOpCount += N
+        if num_lines == N:
+            break
+
+        # Step 4: Adjust the matrix
+        cost_matrix = _step4_adjust_matrix(cost_matrix, row_covered, col_covered, p)
+        # The full implementation of Step 3 (finding min lines/max matching)
+        # is complex and usually requires iterative covering/uncovering (Munkres' algorithm).
+        # We rely on the matrix adjustment to eventually force an N-line cover.
+
+    # Final Step: Extract the assignments
+    p.assignments = _get_assignments(Z)
+
+    # 1 assignment for the final result
+    p.basicOpCount += 1
+
+    p.stop()
+
+
+if __name__ == '__main__':
+    # Set a small, manageable problem size for testing
+    N = 5
+
+    # Reset random seed for reproducible problem data
+    random.seed(42)
+    p = Problem(N)
+
+    solve_hungarian(p)
+    print(p)
