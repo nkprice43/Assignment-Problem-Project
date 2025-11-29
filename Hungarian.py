@@ -1,211 +1,148 @@
 import random
 import time
-import numpy as np  # Used for matrix operations, which makes implementation cleaner
+import math
+from problem import Problem
 
+def hungarian(problem: Problem):
+    problem.start()
 
-class Problem:
+    # Copy cost matrix
+    C = [row[:] for row in problem.workers_tasks]
+    n = problem.problemSize
 
-    def __init__(self, problemSize: int) -> None:
-        self.problemSize = problemSize
+    # STEP 1: Row reduction
+    for i in range(n):
+        rmin = min(C[i])
+        for j in range(n):
+            C[i][j] -= rmin
+            problem.basicOpCount += 1
 
-        # Initialize a random cost matrix (0 to 1)
-        # Using a fixed seed for reproducible results in this example
-        random.seed(42)
-        self.workers_tasks = [[random.random() for _ in range(self.problemSize)] for _ in range(self.problemSize)]
+    # STEP 2: Column reduction
+    for j in range(n):
+        cmin = min(C[i][j] for i in range(n))
+        for i in range(n):
+            C[i][j] -= cmin
+            problem.basicOpCount += 1
 
-        # Initial assignments (will be updated by the solver)
-        self.assignments = []
+    # Masks
+    starred = [[False]*n for _ in range(n)]
+    primed  = [[False]*n for _ in range(n)]
+    row_cover = [False]*n
+    col_cover = [False]*n
 
-        self.time = 0.0
+    # STEP 3: Star zeros
+    for i in range(n):
+        for j in range(n):
+            if C[i][j] == 0 and not row_cover[i] and not col_cover[j]:
+                starred[i][j] = True
+                row_cover[i] = True
+                col_cover[j] = True
 
-        self.basicOpCount = 0
+    # Uncover rows and columns
+    row_cover[:] = [False]*n
+    col_cover[:] = [False]*n
 
-    def __str__(self) -> str:
-        s = f'''
-Problem Size: {self.problemSize}
-            Total Cost: {self.totalCost()}
-            Basic Operation Count: {self.basicOpCount}
-            Processing Time: {self.time:.6f} seconds
-        '''
-        return s
+    # Helper functions
+    def find_star_in_row(r):
+        for j in range(n):
+            if starred[r][j]: return j
+        return None
 
-    # Time taken = time finished - time started
-    def start(self):
-        self.time = -time.time()
+    def find_star_in_col(c):
+        for i in range(n):
+            if starred[i][c]: return i
+        return None
 
-    def stop(self):
-        self.time += time.time()
+    def find_prime_in_row(r):
+        for j in range(n):
+            if primed[r][j]: return j
+        return None
 
-    def totalCost(self):
-        cost = 0
-        for worker, job in self.assignments:
-            # 1 addition, 1 matrix access for each assignment
-            cost += self.workers_tasks[worker][job]
-            # NOTE: We do not increment basicOpCount here to avoid overcounting if __str__ is called multiple times.
-        return cost
-
-
-# --- Manual Hungarian Algorithm Implementation ---
-
-def _step1_reduce_rows(cost_matrix: np.ndarray, p: 'Problem') -> np.ndarray:
-    """Subtracts the minimum value from each row."""
-    N = p.problemSize
-    for i in range(N):
-        min_val = np.min(cost_matrix[i, :])
-        # Find minimum: N comparisons/assignments (O(N))
-        # Subtract minimum: N subtractions/assignments (O(N))
-        cost_matrix[i, :] -= min_val
-        p.basicOpCount += 2 * N
-    return cost_matrix
-
-
-def _step2_reduce_cols(cost_matrix: np.ndarray, p: 'Problem') -> np.ndarray:
-    """Subtracts the minimum value from each column."""
-    N = p.problemSize
-    for j in range(N):
-        min_val = np.min(cost_matrix[:, j])
-        # Find minimum: N comparisons/assignments (O(N))
-        # Subtract minimum: N subtractions/assignments (O(N))
-        cost_matrix[:, j] -= min_val
-        p.basicOpCount += 2 * N
-    return cost_matrix
-
-
-def _step3_cover_zeros(cost_matrix: np.ndarray, p: 'Problem') -> tuple:
-    """Tries to cover all zeros with minimum lines."""
-    N = p.problemSize
-    # Initialize covers and assignments
-    row_covered = np.zeros(N, dtype=bool)
-    col_covered = np.zeros(N, dtype=bool)
-    Z = np.zeros((N, N), dtype=int)  # Zeros matrix
-
-    # Find initial assignments (a single zero in row/col)
-    assignments = []
-
-    # Simple assignment heuristic (Greedy, not necessarily optimal for coverage)
-    for i in range(N):
-        for j in range(N):
-            # N*N comparisons
-            p.basicOpCount += 1
-            if cost_matrix[i, j] == 0 and not row_covered[i] and not col_covered[j]:
-                Z[i, j] = 1
-                row_covered[i] = True
-                col_covered[j] = True
-                assignments.append((i, j))
-                # 3 assignments (Z[i,j], row_covered, col_covered)
-                p.basicOpCount += 3
-
-                # Step 3.1: Cover all columns that contain an assignment (marked Z=1)
-    col_covered = np.any(Z, axis=0)
-
-    # The number of lines is the sum of covered rows/columns.
-    # The full Hungarian covering logic (Kuhn's modification/Munkres) is complex.
-    # We simplify this step by just counting the assigned columns as covered.
-
-    num_lines = np.sum(col_covered)
-
-    # 1 addition/comparison for each element in the array
-    p.basicOpCount += N
-
-    return num_lines, row_covered, col_covered, Z
-
-
-def _step4_adjust_matrix(cost_matrix: np.ndarray, row_covered: np.ndarray, col_covered: np.ndarray,
-                         p: 'Problem') -> np.ndarray:
-    """Adjusts the matrix if the number of lines is less than N."""
-    N = p.problemSize
-
-    # Find the smallest uncovered element (min_val)
-    min_val = np.inf
-    # N*N comparisons
-    p.basicOpCount += N * N
-    for i in range(N):
-        if not row_covered[i]:
-            for j in range(N):
-                if not col_covered[j]:
-                    min_val = min(min_val, cost_matrix[i, j])
-
-    # 1. Subtract min_val from every uncovered element
-    # N*N checks/subtractions in the worst case (O(N^2))
-    for i in range(N):
-        for j in range(N):
-            if not row_covered[i] and not col_covered[j]:
-                cost_matrix[i, j] -= min_val
-                p.basicOpCount += 1
-
-    # 2. Add min_val to every element covered by two lines (double-covered)
-    # N*N checks/additions in the worst case (O(N^2))
-    for i in range(N):
-        if row_covered[i]:
-            for j in range(N):
-                if col_covered[j]:
-                    cost_matrix[i, j] += min_val
-                    p.basicOpCount += 1
-
-    # The total operation count for this step is dominated by O(N^2)
-    return cost_matrix
-
-
-def _get_assignments(Z: np.ndarray) -> list:
-    """Extracts the final assignments from the Z matrix."""
-    return list(zip(*np.where(Z == 1)))
-
-
-def solve_hungarian(p: Problem) -> None:
-    """
-    Solves the assignment problem using a manual implementation of the Hungarian method.
-    Modifies the problem_instance in-place and counts basic operations.
-    NOTE: The assignment logic (Steps 3/4) is simplified for counting and Python readability.
-    """
-    p.start()
-    N = p.problemSize
-
-    # 1. Copy the cost matrix to a working matrix (N*N assignments)
-    cost_matrix = np.array(p.workers_tasks)
-    p.basicOpCount += N * N
-
-    # The core loop of the Hungarian algorithm
-    iteration_count = 0
+    # MAIN LOOP
     while True:
-        iteration_count += 1
 
-        # Step 1: Row Reduction
-        cost_matrix = _step1_reduce_rows(cost_matrix, p)
+        # STEP 4: Cover columns containing stars
+        for i in range(n):
+            for j in range(n):
+                if starred[i][j]:
+                    col_cover[j] = True
 
-        # Step 2: Column Reduction
-        cost_matrix = _step2_reduce_cols(cost_matrix, p)
+        if sum(col_cover) == n:
+            break  # Done
 
-        # Step 3: Cover Zeros and find initial assignment
-        num_lines, row_covered, col_covered, Z = _step3_cover_zeros(cost_matrix, p)
+        # STEP 5: Find uncovered zero and prime it
+        while True:
+            z = None
+            for i in range(n):
+                if not row_cover[i]:
+                    for j in range(n):
+                        if C[i][j] == 0 and not col_cover[j]:
+                            z = (i, j)
+                            break
+                    if z:
+                        break
 
-        # Check for optimality (N lines cover all zeros)
-        # N comparisons
-        p.basicOpCount += N
-        if num_lines == N:
-            break
+            if z is None:
+                # STEP 7: Adjust matrix
+                uncovered_vals = [
+                    C[i][j]
+                    for i in range(n) if not row_cover[i]
+                    for j in range(n) if not col_cover[j]
+                ]
+                m = min(uncovered_vals)
 
-        # Step 4: Adjust the matrix
-        cost_matrix = _step4_adjust_matrix(cost_matrix, row_covered, col_covered, p)
-        # The full implementation of Step 3 (finding min lines/max matching)
-        # is complex and usually requires iterative covering/uncovering (Munkres' algorithm).
-        # We rely on the matrix adjustment to eventually force an N-line cover.
+                for i in range(n):
+                    for j in range(n):
+                        if row_cover[i]:
+                            C[i][j] += m
+                        if not col_cover[j]:
+                            C[i][j] -= m
+                continue
 
-    # Final Step: Extract the assignments
-    p.assignments = _get_assignments(Z)
+            r, c = z
+            primed[r][c] = True
 
-    # 1 assignment for the final result
-    p.basicOpCount += 1
+            s = find_star_in_row(r)
+            if s is None:
+                # STEP 6: Augmenting path
+                path = [(r, c)]
+                done = False
+                while not done:
+                    r2 = find_star_in_col(path[-1][1])
+                    if r2 is None:
+                        done = True
+                    else:
+                        path.append((r2, path[-1][1]))
+                        c2 = find_prime_in_row(r2)
+                        path.append((r2, c2))
 
-    p.stop()
+                # Flip stars along path
+                for (r, c) in path:
+                    starred[r][c] = not starred[r][c]
 
+                # Clear covers and primes
+                row_cover[:] = [False]*n
+                col_cover[:] = [False]*n
+                primed = [[False]*n for _ in range(n)]
 
-if __name__ == '__main__':
-    # Set a small, manageable problem size for testing
-    N = 5
+                break  # Return to Step 4
 
-    # Reset random seed for reproducible problem data
-    random.seed(42)
-    p = Problem(N)
+            else:
+                row_cover[r] = True
+                col_cover[s] = False
 
-    solve_hungarian(p)
-    print(p)
+    # Final assignments
+    assignments = []
+    for i in range(n):
+        for j in range(n):
+            if starred[i][j]:
+                assignments.append((i, j))
+
+    problem.assignments = assignments
+    problem.stop()
+
+def solve_hungarian(problem: Problem):
+    """
+    Wrapper that main.py will call.
+    """
+    hungarian(problem)
