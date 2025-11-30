@@ -40,6 +40,10 @@ def jt(p: list[list], mobile: list = [], d: list | None = None, rec: bool = Fals
         return p, mobile, d
     else:
 
+        mobile = []
+        for i in range(len(l)):
+            if isMobile(i, l, d):
+                mobile.append(l[i])
 
         if len(mobile) == 0:
             return p

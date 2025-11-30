@@ -93,12 +93,13 @@ class MinCostMaxFlow:
 # -----------------------------
 # Build assignment flow network and run min-cost flow
 # -----------------------------
-def solve_assignment_with_min_cost_flow(p: Problem, require_perfect: bool = True) -> Tuple[List[Tuple[int,int]], float]:
+def solve_assignment_with_min_cost_flow(p: Problem, require_perfect: bool = True):
     """
     Given a Problem instance p, builds a flow network and computes a minimum-cost assignment.
     Returns the list of assignments (worker, job) and the total cost.
     If require_perfect is True, raises a ValueError if a perfect assignment (flow = n) cannot be found.
     """
+    p.start()
 
     n = p.problemSize
     # node indexing:
@@ -152,17 +153,9 @@ def solve_assignment_with_min_cost_flow(p: Problem, require_perfect: bool = True
                     assignments.append((i, job_index))
                     break
 
-    return assignments, total_cost, mcmf
-
-# -----------------------------
-# Utility to update Problem object after solving
-# -----------------------------
-def assign_solution_to_problem(p: Problem, assignments: List[Tuple[int,int]], cost: float):
     p.assignments = assignments
-    # update basicOpCount: count number of assignments as a simple op metric + maybe edges considered
-    # We'll set basicOpCount to len(assignments) for simplicity (you can expand this if you want).
-    p.basicOpCount = len(assignments)
-
+    p.basicOpCount = mcmf.opCount
+    p.stop()
 # -----------------------------
 # Example usage (main)
 # -----------------------------
@@ -170,11 +163,7 @@ if __name__ == "__main__":
     random.seed(time.time())
     p = Problem(3)   # problemSize = 3 -> n = 8
 
-    p.start()
-    assignments, cost, mcmf = solve_assignment_with_min_cost_flow(p, require_perfect=True)
-    assign_solution_to_problem(p, assignments, cost)
-    p.basicOpCount = mcmf.opCount
-    p.stop()
+    solve_assignment_with_min_cost_flow(p, require_perfect=True)
 
     # Print result
     print("Assignments (worker -> job):")
