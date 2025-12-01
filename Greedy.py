@@ -43,3 +43,5 @@ if __name__ == '__main__':
     solve_greedy(p)
 
     print(p)
+
+"Source: ChatGPT. Version 5.1, OpenAI, 2025, https://chat.openai.com/. Accessed 11/29/25"

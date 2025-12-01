@@ -146,3 +146,5 @@ def solve_hungarian(problem: Problem):
     Wrapper that main.py will call.
     """
     hungarian(problem)
+
+"Source: ChatGPT. Version 5.1, OpenAI, 2025, https://chat.openai.com/. Accessed 11/29/25"

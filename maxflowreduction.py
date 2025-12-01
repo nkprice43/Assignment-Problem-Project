@@ -171,3 +171,5 @@ if __name__ == "__main__":
         print(f"  {w} -> {j}   cost = {p.workers_tasks[w][j]:.6f}")
     print()
     print(p)
+
+"Source: ChatGPT. Version 5.1, OpenAI, 2025, https://chat.openai.com/. Accessed 11/29/25"
